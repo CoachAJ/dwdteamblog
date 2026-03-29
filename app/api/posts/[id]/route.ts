@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPostById, updatePost, deletePost } from '@/lib/posts'
 import { isAdminAuthenticated } from '@/lib/auth'
+import { sendNewsletterForPost } from '@/lib/getresponse'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -24,7 +25,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
   try {
     const body = await req.json()
+    const existing = await getPostById(params.id)
+    const wasUnpublished = existing && !existing.published
     const post = await updatePost(params.id, body)
+    if (wasUnpublished && post.published) {
+      sendNewsletterForPost(post).catch(console.error)
+    }
     return NextResponse.json(post)
   } catch (err) {
     console.error(err)

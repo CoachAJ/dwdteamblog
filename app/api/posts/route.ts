@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAllPosts, createPost } from '@/lib/posts'
 import { isAdminAuthenticated } from '@/lib/auth'
+import { sendNewsletterForPost } from '@/lib/getresponse'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Title and content are required.' }, { status: 400 })
     }
     const post = await createPost(body)
+    if (post.published) {
+      sendNewsletterForPost(post).catch(console.error)
+    }
     return NextResponse.json(post, { status: 201 })
   } catch (err) {
     console.error(err)
