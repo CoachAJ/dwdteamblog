@@ -1,6 +1,8 @@
 import { getAllPosts } from '@/lib/posts'
 import { NextRequest } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const posts = await getAllPosts(true)
   const baseUrl = req.nextUrl.origin
