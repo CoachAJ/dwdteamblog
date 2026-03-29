@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validatePassword, generateSessionToken, COOKIE_NAME } from '@/lib/auth'
+import { verifyPassword, generateSessionToken, COOKIE_NAME } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   try {
-    const { password } = await req.json()
-    if (!validatePassword(password)) {
-      return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+    const { email, password } = await req.json()
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
     }
 
-    const token = generateSessionToken()
-    const res = NextResponse.json({ success: true })
+    const user = await prisma.adminUser.findUnique({ where: { email: email.toLowerCase().trim() } })
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
+    }
+
+    const valid = await verifyPassword(password, user.passwordHash)
+    if (!valid) {
+      return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
+    }
+
+    const token = generateSessionToken(user.email)
+    const res = NextResponse.json({ success: true, name: user.name })
     res.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

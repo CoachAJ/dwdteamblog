@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BookOpen, Lock } from 'lucide-react'
 
 export default function AdminLoginPage() {
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -18,13 +19,14 @@ export default function AdminLoginPage() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ email, password }),
     })
 
     if (res.ok) {
       router.push('/admin/dashboard')
     } else {
-      setError('Incorrect password. Please try again.')
+      const data = await res.json().catch(() => ({}))
+      setError(data.error || 'Invalid email or password.')
     }
     setLoading(false)
   }
@@ -49,16 +51,30 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Admin Password
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+                placeholder="you@example.com"
+                required
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
-                placeholder="Enter your admin password"
+                placeholder="Enter your password"
                 required
-                autoFocus
               />
             </div>
 
