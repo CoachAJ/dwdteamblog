@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json({ success: true, name: user.name })
     setSessionCookie(res, user.email)
     return res
-  } catch {
-    return NextResponse.json({ error: 'Bad request' }, { status: 400 })
+  } catch (err) {
+    console.error('[Login] Error:', err)
+    return NextResponse.json({ error: 'Server error — check Netlify function logs.' }, { status: 500 })
   }
 }
