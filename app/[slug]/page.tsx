@@ -11,14 +11,30 @@ export const dynamic = 'force-dynamic'
 
 type Props = { params: { slug: string } }
 
+const BASE_URL = process.env.NEXT_PUBLIC_BLOG_URL || 'https://blog.dailywithdocteam.com'
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   let post = null
   try { post = await getPostBySlug(params.slug) } catch { /* db error */ }
   if (!post) return { title: 'Post Not Found' }
+  const url = `${BASE_URL}/${post.slug}`
   return {
     title: post.title,
     description: post.excerpt ?? undefined,
+    alternates: { canonical: url },
     openGraph: {
+      type: 'article',
+      title: post.title,
+      description: post.excerpt ?? undefined,
+      url,
+      images: post.coverImage ? [{ url: post.coverImage, width: 1200, height: 630 }] : [],
+      publishedTime: post.createdAt.toISOString(),
+      modifiedTime: post.updatedAt.toISOString(),
+      authors: [post.author],
+      tags: post.tags ? post.tags.split(',').map((t) => t.trim()) : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
       title: post.title,
       description: post.excerpt ?? undefined,
       images: post.coverImage ? [post.coverImage] : [],
@@ -34,9 +50,33 @@ export default async function PostPage({ params }: Props) {
 
   const html = await renderMarkdown(post.content)
   const tags = parseTags(post.tags)
+  const url = `${BASE_URL}/${post.slug}`
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt ?? undefined,
+    image: post.coverImage ?? undefined,
+    url,
+    datePublished: post.createdAt.toISOString(),
+    dateModified: post.updatedAt.toISOString(),
+    author: { '@type': 'Person', name: post.author },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Daily with Doc Team',
+      url: BASE_URL,
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    keywords: post.tags ?? undefined,
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header />
 
       {post.coverImage && (
