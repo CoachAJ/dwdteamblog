@@ -7,7 +7,12 @@ import { BookOpen } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const posts = await getAllPosts(true)
+  let posts: Awaited<ReturnType<typeof getAllPosts>> = []
+  try {
+    posts = await getAllPosts(true)
+  } catch (err) {
+    console.error('[HomePage] DB error:', err)
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

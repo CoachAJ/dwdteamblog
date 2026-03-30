@@ -7,12 +7,13 @@ import { Calendar, User, Tag, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Metadata } from 'next'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 type Props = { params: { slug: string } }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const post = await getPostBySlug(params.slug)
+  let post = null
+  try { post = await getPostBySlug(params.slug) } catch { /* db error */ }
   if (!post) return { title: 'Post Not Found' }
   return {
     title: post.title,
@@ -26,7 +27,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PostPage({ params }: Props) {
-  const post = await getPostBySlug(params.slug)
+  let post = null
+  try { post = await getPostBySlug(params.slug) } catch { /* db error */ }
 
   if (!post || !post.published) notFound()
 
