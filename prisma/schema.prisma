@@ -12,6 +12,7 @@ model AdminUser {
   email        String   @unique
   passwordHash String
   name         String   @default("Admin")
+  role         String   @default("admin")
   createdAt    DateTime @default(now())
 }
 

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Save, Eye, EyeOff, ArrowLeft, Loader2 } from 'lucide-react'
+import { Save, Eye, EyeOff, ArrowLeft, Loader2, Upload, Link2, X } from 'lucide-react'
 
 type PostData = {
   title: string
@@ -35,10 +35,46 @@ export default function PostEditor({ initialData, postId }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'write' | 'preview'>('write')
+  const [imageTab, setImageTab] = useState<'url' | 'upload'>('url')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   function update(field: keyof PostData, value: string | boolean) {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  async function handleImageFile(file: File) {
+    if (!file.type.startsWith('image/')) return
+    setUploading(true)
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const img = new Image()
+        const reader = new FileReader()
+        reader.onload = (e) => { img.src = e.target?.result as string }
+        img.onload = () => {
+          const MAX_W = 1200, MAX_H = 630
+          let { width, height } = img
+          if (width > MAX_W || height > MAX_H) {
+            const ratio = Math.min(MAX_W / width, MAX_H / height)
+            width = Math.round(width * ratio)
+            height = Math.round(height * ratio)
+          }
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+          resolve(canvas.toDataURL('image/jpeg', 0.85))
+        }
+        img.onerror = reject
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      update('coverImage', dataUrl)
+    } catch {
+      setError('Failed to process image. Please try a different file.')
+    }
+    setUploading(false)
   }
 
   async function save(publish?: boolean) {
@@ -210,16 +246,69 @@ export default function PostEditor({ initialData, postId }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Cover Image URL</label>
-              <input
-                type="url"
-                value={form.coverImage}
-                onChange={(e) => update('coverImage', e.target.value)}
-                placeholder="https://…"
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
+              <label className="block text-xs font-medium text-slate-600 mb-1">Cover Image</label>
+              <div className="flex border border-slate-200 rounded-lg overflow-hidden mb-2">
+                <button
+                  type="button"
+                  onClick={() => setImageTab('url')}
+                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium transition-colors ${imageTab === 'url' ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Link2 className="w-3 h-3" /> URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImageTab('upload')}
+                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium transition-colors ${imageTab === 'upload' ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Upload className="w-3 h-3" /> Upload
+                </button>
+              </div>
+
+              {imageTab === 'url' ? (
+                <input
+                  type="url"
+                  value={form.coverImage.startsWith('data:') ? '' : form.coverImage}
+                  onChange={(e) => update('coverImage', e.target.value)}
+                  placeholder="https://…"
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleImageFile(f) }}
+                  className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors"
+                >
+                  {uploading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-brand-500 mx-auto" />
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
+                      <p className="text-xs text-slate-500">Click or drag & drop an image</p>
+                      <p className="text-xs text-slate-400">Auto-resized to 1200×630</p>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f) }}
+                  />
+                </div>
+              )}
+
               {form.coverImage && (
-                <img src={form.coverImage} alt="Cover preview" className="mt-2 w-full h-24 object-cover rounded-lg" />
+                <div className="mt-2 relative">
+                  <img src={form.coverImage} alt="Cover preview" className="w-full h-24 object-cover rounded-lg" />
+                  <button
+                    type="button"
+                    onClick={() => update('coverImage', '')}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
               )}
             </div>
           </div>

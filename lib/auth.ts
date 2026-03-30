@@ -58,6 +58,18 @@ export function getSessionEmail(token: string): string | null {
   }
 }
 
+export function getSessionEmailFromCookie(): string | null {
+  try {
+    const cookieStore = cookies()
+    const token = cookieStore.get(COOKIE_NAME)?.value
+    if (!token) return null
+    if (!validateSessionToken(token)) return null
+    return getSessionEmail(token)
+  } catch {
+    return null
+  }
+}
+
 export function isAdminAuthenticated(): boolean {
   try {
     const cookieStore = cookies()

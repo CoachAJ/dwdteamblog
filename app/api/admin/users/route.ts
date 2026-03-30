@@ -1,24 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { hashPassword, isAdminAuthenticated } from '@/lib/auth'
+import { hashPassword, isAdminAuthenticated, getSessionEmailFromCookie } from '@/lib/auth'
+
+async function requireAdmin(): Promise<{ error: NextResponse } | null> {
+  if (!isAdminAuthenticated()) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  const email = getSessionEmailFromCookie()
+  if (email && email !== 'api@admin') {
+    const user = await prisma.adminUser.findUnique({ where: { email }, select: { role: true } })
+    if (user && user.role !== 'admin') return { error: NextResponse.json({ error: 'Forbidden: admin role required.' }, { status: 403 }) }
+  }
+  return null
+}
 
 export async function GET() {
-  if (!isAdminAuthenticated()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const check = await requireAdmin()
+  if (check) return check.error
   const users = await prisma.adminUser.findMany({
-    select: { id: true, email: true, name: true, createdAt: true },
+    select: { id: true, email: true, name: true, role: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   })
   return NextResponse.json(users)
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminAuthenticated()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const check = await requireAdmin()
+  if (check) return check.error
   try {
-    const { email, password, name } = await req.json()
+    const { email, password, name, role } = await req.json()
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
     }
@@ -28,8 +36,8 @@ export async function POST(req: NextRequest) {
     }
     const passwordHash = await hashPassword(password)
     const user = await prisma.adminUser.create({
-      data: { email: email.toLowerCase().trim(), passwordHash, name: name || 'Admin' },
-      select: { id: true, email: true, name: true, createdAt: true },
+      data: { email: email.toLowerCase().trim(), passwordHash, name: name || 'Admin', role: role === 'editor' ? 'editor' : 'admin' },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
     })
     return NextResponse.json(user, { status: 201 })
   } catch (err) {
@@ -39,9 +47,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!isAdminAuthenticated()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const check = await requireAdmin()
+  if (check) return check.error
   try {
     const { id } = await req.json()
     const count = await prisma.adminUser.count()

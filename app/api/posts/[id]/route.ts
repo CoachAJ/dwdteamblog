@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPostById, updatePost, deletePost } from '@/lib/posts'
-import { isAdminAuthenticated } from '@/lib/auth'
+import { isAdminAuthenticated, getSessionEmailFromCookie } from '@/lib/auth'
 import { sendNewsletterForPost } from '@/lib/getresponse'
+import { prisma } from '@/lib/db'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +42,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   if (!isAdminAuthenticated()) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const email = getSessionEmailFromCookie()
+  if (email && email !== 'api@admin') {
+    const user = await prisma.adminUser.findUnique({ where: { email }, select: { role: true } })
+    if (user && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: only admins can delete posts.' }, { status: 403 })
+    }
   }
   try {
     await deletePost(params.id)

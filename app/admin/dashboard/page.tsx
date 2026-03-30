@@ -20,6 +20,7 @@ type Post = {
 export default function AdminDashboard() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState<'admin' | 'editor'>('editor')
   const router = useRouter()
 
   async function loadPosts() {
@@ -30,7 +31,15 @@ export default function AdminDashboard() {
     setLoading(false)
   }
 
-  useEffect(() => { loadPosts() }, [])
+  async function loadCurrentUser() {
+    const res = await fetch('/api/auth/me')
+    if (res.ok) {
+      const data = await res.json()
+      setUserRole(data.role === 'admin' ? 'admin' : 'editor')
+    }
+  }
+
+  useEffect(() => { loadPosts(); loadCurrentUser() }, [])
 
   async function togglePublish(post: Post) {
     await fetch(`/api/posts/${post.id}`, {
@@ -155,12 +164,14 @@ export default function AdminDashboard() {
                         >
                           <Pencil className="w-4 h-4" />
                         </Link>
-                        <button
-                          onClick={() => deletePost(post.id)}
-                          className="p-1.5 rounded-md hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {userRole === 'admin' && (
+                          <button
+                            onClick={() => deletePost(post.id)}
+                            className="p-1.5 rounded-md hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
