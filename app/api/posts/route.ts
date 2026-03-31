@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAllPosts, createPost } from '@/lib/posts'
-import { isAdminAuthenticated } from '@/lib/auth'
+import { isAdminAuthenticated, isRequestAuthenticated } from '@/lib/auth'
 import { sendNewsletterForPost } from '@/lib/getresponse'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 }
 
 export async function OPTIONS() {
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminAuthenticated()) {
+  if (!isRequestAuthenticated(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

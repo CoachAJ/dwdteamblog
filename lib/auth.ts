@@ -81,4 +81,11 @@ export function isAdminAuthenticated(): boolean {
   }
 }
 
+export function isRequestAuthenticated(req: { headers: { get: (k: string) => string | null } }): boolean {
+  const apiKey = process.env.API_KEY
+  const authHeader = req.headers.get('authorization') || ''
+  if (apiKey && authHeader === `Bearer ${apiKey}`) return true
+  return isAdminAuthenticated()
+}
+
 export { AUTH_SECRET }

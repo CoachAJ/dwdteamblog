@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPostById, updatePost, deletePost } from '@/lib/posts'
-import { isAdminAuthenticated, getSessionEmailFromCookie } from '@/lib/auth'
+import { isAdminAuthenticated, isRequestAuthenticated, getSessionEmailFromCookie } from '@/lib/auth'
 import { sendNewsletterForPost } from '@/lib/getresponse'
 import { prisma } from '@/lib/db'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 }
 
 export async function OPTIONS() {
@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isAdminAuthenticated()) {
+  if (!isRequestAuthenticated(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
