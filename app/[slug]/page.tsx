@@ -18,6 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try { post = await getPostBySlug(params.slug) } catch { /* db error */ }
   if (!post) return { title: 'Post Not Found' }
   const url = `${BASE_URL}/${post.slug}`
+  const coverUrl =
+    post.coverImage && !post.coverImage.startsWith('data:') ? post.coverImage : null
   return {
     title: post.title,
     description: post.excerpt ?? undefined,
@@ -27,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: post.title,
       description: post.excerpt ?? undefined,
       url,
-      images: post.coverImage ? [{ url: post.coverImage, width: 1200, height: 630 }] : [],
+      images: coverUrl ? [{ url: coverUrl, width: 1200, height: 630 }] : undefined,
       publishedTime: post.createdAt.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
       authors: [post.author],
@@ -37,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: 'summary_large_image',
       title: post.title,
       description: post.excerpt ?? undefined,
-      images: post.coverImage ? [post.coverImage] : [],
+      images: coverUrl ? [coverUrl] : undefined,
     },
   }
 }
